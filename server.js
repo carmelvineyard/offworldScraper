@@ -3,6 +3,7 @@ var bodyParser = require("body-parser");
 var logger = require("morgan");
 var mongoose = require("mongoose");
 
+
 // Our scraping tools
 // Axios is a promised-based http library, similar to jQuery's Ajax method
 // It works on the client and on the server
@@ -10,7 +11,7 @@ var axios = require("axios");
 var cheerio = require("cheerio");
 
 // Require all models
-var db = require("./models");
+//var db = require("./models");
 
 var PORT = 3000;
 
@@ -32,40 +33,53 @@ var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/mongoHeadlines
 // Set mongoose to leverage built in JavaScript ES6 Promises
 // Connect to the Mongo DB
 mongoose.Promise = Promise;
-mongoose.connect(MONGODB_URI, {
+/*mongoose.connect(MONGODB_URI, {
   useMongoClient: true
-});
+});  */
 
-// Making a request for offworld.com's front page. The page's HTML is passed as the callback's third argument
-request("http://offworld.com/", function(error, response, html) {
+// A GET route for scraping the echojs website
+app.get("/scrape", function(req, res) {
+  // First, we grab the body of the html with request
+  axios.get("http://offworld.com").then(function(response) {
+    // Then, we load that into cheerio and save it to $ for a shorthand selector
+    var $ = cheerio.load(response.data);
 
-  // Load the HTML into cheerio and save it to a variable
-  // '$' becomes a shorthand for cheerio's selector commands, much like jQuery's '$'
-  var $ = cheerio.load(html);
+    // Now, we grab every h2, and do the following:
+    $("h2").each(function(i, element) {
+        
+        
+      // Save an empty result object
+      var result = {};
 
-  // An empty array to save the data that we'll scrape
-  var results = [];
+      // Add the text and href of every link, and save them as properties of the result object
+      result.title = $(this)
+        .text();
+      result.link = $(this)
+        .children("a")
+        .attr("href");
+      result.summary = $(this.next)
+        .text();
 
-  // With cheerio, find each div with the "??" class and its children- h2 with a tag and p tags with class "excerpt"
-  // (i: iterator. element: the current element)
-  $("p.excerpt").each(function(i, element) {
+        //$("h2").next() is what I am hoping $(this.next) will translate to. That should grab
+        //the next sibling, the <p> that has the summary.
 
-    // Save the text of the element in a "title" variable
-    var title = $(element).text().trim();
-
-    // In the currently selected element, look at its child elements (i.e., its a-tags),
-    // then save the values for any "href" attributes that the child elements may have
-    var link = $(element).children().attr("href");
-
-    // Save these results in an object that we'll push into the results array we defined earlier
-    results.push({
-      title: title,
-      link: link
+        
+      // Create a new Article using the `result` object built from scraping
+      db.Article.create(result)
+        .then(function(dbArticle) {
+          // View the added result in the console
+          console.log(dbArticle);
+        })
+        .catch(function(err) {
+          // If an error occurred, send it to the client
+          return res.json(err);
+        });
     });
+
+    //success message:
+    console.log("Mischief managed!");
+
+    // If we were able to successfully scrape and save an Article, send a message to the client
+    //res.send("Scrape Complete");
   });
-
-
-
-  // Log the results once you've looped through each of the elements found with cheerio
-  console.log(results);
 });
