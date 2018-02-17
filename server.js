@@ -62,18 +62,17 @@ app.get("/scrape", function(req, res) {
 
         //$("h2").next() is what I am hoping $(this.next) will translate to. That should grab
         //the next sibling, the <p> that has the summary.
-
-        
-      // Create a new Article using the `result` object built from scraping
-      db.Article.create(result)
-        .then(function(dbArticle) {
-          // View the added result in the console
-          console.log(dbArticle);
-        })
-        .catch(function(err) {
-          // If an error occurred, send it to the client
-          return res.json(err);
-        });
+      if (db.collection.findOne(result.title) = false);        
+          // Create a new Article using the `result` object built from scraping
+          db.Article.create(result)
+            .then(function(dbArticle) {
+              // View the added result in the console
+              console.log(dbArticle);
+            })
+            .catch(function(err) {
+              // If an error occurred, send it to the client
+              return res.json(err);
+            })    
     });
 
     //success message:
